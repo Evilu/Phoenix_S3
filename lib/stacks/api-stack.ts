@@ -67,8 +67,32 @@ export class ApiStack extends cdk.Stack {
         tracingEnabled: true,
         loggingLevel: apigw.MethodLoggingLevel.INFO,
         metricsEnabled: true,
+        throttlingRateLimit: 100,
+        throttlingBurstLimit: 50,
       },
     });
+
+    // Usage plan with rate limiting and API key (production only — LocalStack has limited support)
+    if (!props.isLocal) {
+      const plan = this.api.addUsagePlan('UsagePlan', {
+        name: 'items-api-usage-plan',
+        description: 'Rate-limited usage plan for Items API',
+        throttle: {
+          rateLimit: 100,
+          burstLimit: 50,
+        },
+        quota: {
+          limit: 10_000,
+          period: apigw.Period.DAY,
+        },
+      });
+
+      const apiKey = this.api.addApiKey('ApiKey', {
+        apiKeyName: 'items-api-key',
+        description: 'API key for Items API',
+      });
+      plan.addApiKey(apiKey);
+    }
 
     // Grant API Gateway permission to invoke the Lambda
     createItemFn.fn.addPermission('ApiGwInvoke', {

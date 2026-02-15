@@ -40,6 +40,10 @@ function validateRequest(body: unknown): CreateItemRequest {
     throw new ValidationError('name must be 255 characters or fewer');
   }
 
+  if (typeof description === 'string' && description.length > 1000) {
+    throw new ValidationError('description must be 1000 characters or fewer');
+  }
+
   return {
     name: name.trim(),
     description: typeof description === 'string' ? description : undefined,
