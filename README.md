@@ -189,6 +189,29 @@ test/
     └── api-pipeline.test.ts             # API Gateway → Lambda → S3 pipeline tests
 ```
 
+## Deploying to AWS
+
+The same CDK stacks that run locally via LocalStack can be deployed to a real AWS account with no code changes. The S3 client factory, Lambda handler, and CDK stacks all detect the environment automatically.
+
+```bash
+# 1. Configure AWS credentials
+aws configure
+
+# 2. Bootstrap CDK (one-time per account/region)
+npx cdk bootstrap
+
+# 3. Deploy all stacks
+npm run cdk:deploy
+```
+
+The `StorageStack` creates a versioned, encrypted S3 bucket with public access blocked. The `ApiStack` deploys the Lambda and API Gateway — the API URL is printed in the stack outputs.
+
+To tear down:
+
+```bash
+npx cdk destroy --all
+```
+
 ## Design Decisions
 
 | Decision | Rationale |
