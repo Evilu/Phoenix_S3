@@ -13,14 +13,14 @@ graph TD
         CLI_DL[Retrieve Script] -->|GetObject| S3
     end
 
-    subgraph Exercise 2 — Local Dev
+    subgraph Exercise 2 - Local Dev
         SPEC_L[openapi.yaml] -->|BucketDeployment| S3
         SPEC_L -->|SpecRestApi inline| APIGW[API Gateway<br/>REST API]
         APIGW -->|POST /items| LAMBDA[Lambda<br/>create-item]
         LAMBDA -->|PutObject| S3
     end
 
-    subgraph Exercise 2 — Production CI/CD
+    subgraph Exercise 2 - Production CI/CD
         GIT[Push to main] -->|triggers| GHA[GitHub Action]
         GHA -->|1. Upload spec| S3
         GHA -->|2. put-rest-api| APIGW2[API Gateway]
