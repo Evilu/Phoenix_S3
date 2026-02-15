@@ -13,11 +13,18 @@ graph TD
         CLI_DL[Retrieve Script] -->|GetObject| S3
     end
 
-    subgraph Exercise 2
-        SPEC[openapi.yaml] -->|BucketDeployment| S3
-        SPEC -->|SpecRestApi import| APIGW[API Gateway<br/>REST API]
+    subgraph Exercise 2 — Local Dev
+        SPEC_L[openapi.yaml] -->|BucketDeployment| S3
+        SPEC_L -->|SpecRestApi inline| APIGW[API Gateway<br/>REST API]
         APIGW -->|POST /items| LAMBDA[Lambda<br/>create-item]
-        LAMBDA -->|grantReadWrite| S3
+        LAMBDA -->|PutObject| S3
+    end
+
+    subgraph Exercise 2 — Production CI/CD
+        GIT[Push to main] -->|triggers| GHA[GitHub Action]
+        GHA -->|1. Upload spec| S3
+        GHA -->|2. put-rest-api| APIGW2[API Gateway]
+        GHA -->|3. create-deployment| APIGW2
     end
 
     subgraph Infrastructure
@@ -97,7 +104,25 @@ Both scripts handle these scenarios with structured error output:
 
 ## Exercise 2: API Gateway POST Endpoint
 
-The OpenAPI spec (`api/openapi.yaml`) is the single source of truth. At deploy time, CDK reads the spec, substitutes the Lambda ARN, and uploads it to S3 via `BucketDeployment`. The processed spec is also imported inline into API Gateway via `SpecRestApi` (inline import is required because CloudFormation must resolve the Lambda ARN token at deploy time). The Lambda handler persists each created item to S3 under the `items/` prefix.
+The OpenAPI spec (`api/openapi.yaml`) is the single source of truth for the API contract. The Lambda handler persists each created item to S3 under the `items/` prefix.
+
+### Local development (LocalStack)
+
+For local development, CDK reads the spec, substitutes the Lambda ARN, uploads it to S3 via `BucketDeployment`, and imports it inline into API Gateway via `SpecRestApi`. Inline import is used locally because CloudFormation must resolve the Lambda ARN token at deploy time, and LocalStack doesn't support `Custom::CDKBucketDeployment` for the S3-to-API Gateway flow.
+
+### Production CI/CD (GitHub Actions)
+
+In production, the full Swagger-to-API-Gateway flow runs via a GitHub Action (`.github/workflows/deploy-swagger.yml`):
+
+1. **Trigger** — push to `main` that modifies `api/openapi.yaml`
+2. **Substitute** — replaces the `${CreateItemFunctionArn}` placeholder with the real Lambda ARN
+3. **Upload to S3** — uploads the resolved spec to the storage bucket under `api-specs/`
+4. **Import from S3** — calls `aws apigateway put-rest-api` to import the spec from S3 into API Gateway
+5. **Deploy** — creates a new API Gateway deployment to stage `v1`
+
+This implements the requirement as written: **Swagger → S3 → API Gateway imports from S3**.
+
+To use the GitHub Action, add the `AWS_ROLE_ARN` secret to your repository (an IAM role with permissions for S3, API Gateway, Lambda, and CloudFormation read access).
 
 ### Finding your API URL
 
@@ -241,6 +266,8 @@ npm run local:reset
 ## Project Structure
 
 ```
+├── .github/workflows/
+│   └── deploy-swagger.yml           # CI/CD: Swagger → S3 → API Gateway
 ├── bin/app.ts                        # CDK app entry point
 ├── lib/
 │   ├── stacks/

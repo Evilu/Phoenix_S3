@@ -1,0 +1,81 @@
+name: Deploy Swagger to API Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/openapi.yaml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-swagger:
+    name: Upload Swagger to S3 & Import to API Gateway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get stack outputs
+        id: stacks
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name StorageStack \
+            --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" \
+            --output text)
+
+          API_ID=$(aws cloudformation describe-stacks \
+            --stack-name ApiStack \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text | grep -oP '(?<=https://)[^.]+')
+
+          LAMBDA_ARN=$(aws lambda get-function \
+            --function-name ApiStack-CreateItemFunction \
+            --query "Configuration.FunctionArn" \
+            --output text)
+
+          echo "bucket_name=$BUCKET_NAME" >> "$GITHUB_OUTPUT"
+          echo "api_id=$API_ID" >> "$GITHUB_OUTPUT"
+          echo "lambda_arn=$LAMBDA_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Substitute Lambda ARN in spec
+        run: |
+          sed "s|\${CreateItemFunctionArn}|${{ steps.stacks.outputs.lambda_arn }}|g" \
+            api/openapi.yaml > /tmp/openapi-resolved.yaml
+
+      - name: Upload Swagger spec to S3
+        run: |
+          aws s3 cp /tmp/openapi-resolved.yaml \
+            "s3://${{ steps.stacks.outputs.bucket_name }}/api-specs/openapi.yaml" \
+            --content-type "application/x-yaml"
+
+          echo "Swagger spec uploaded to s3://${{ steps.stacks.outputs.bucket_name }}/api-specs/openapi.yaml"
+
+      - name: Import Swagger from S3 into API Gateway
+        run: |
+          aws apigateway put-rest-api \
+            --rest-api-id "${{ steps.stacks.outputs.api_id }}" \
+            --mode overwrite \
+            --body "fileb:///tmp/openapi-resolved.yaml"
+
+          echo "Swagger spec imported into API Gateway"
+
+      - name: Deploy API Gateway
+        run: |
+          aws apigateway create-deployment \
+            --rest-api-id "${{ steps.stacks.outputs.api_id }}" \
+            --stage-name v1
+
+          echo "API Gateway deployed to stage v1"
