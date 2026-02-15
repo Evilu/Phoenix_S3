@@ -80,5 +80,15 @@ export class ApiStack extends cdk.Stack {
       value: this.api.url ?? 'deployment-pending',
       description: 'API Gateway endpoint URL',
     });
+
+    new cdk.CfnOutput(this, 'ApiId', {
+      value: this.api.restApiId,
+      description: 'API Gateway REST API ID (used by CI/CD pipeline)',
+    });
+
+    new cdk.CfnOutput(this, 'LambdaFunctionName', {
+      value: createItemFn.fn.functionName,
+      description: 'Lambda function name (used by CI/CD pipeline)',
+    });
   }
 }

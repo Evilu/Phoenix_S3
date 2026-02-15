@@ -214,6 +214,88 @@ test/
     └── api-pipeline.test.ts             # API Gateway → Lambda → S3 pipeline tests
 ```
 
+## Debugging
+
+<details>
+<summary><strong>VS Code</strong></summary>
+
+Add to `.vscode/launch.json`:
+
+```jsonc
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Unit Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "args": ["vitest", "run", "--no-coverage"],
+      "console": "integratedTerminal",
+      "env": { "NODE_ENV": "test" }
+    },
+    {
+      "name": "Integration Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "args": ["vitest", "run", "--config", "vitest.integration.config.ts"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Upload Script",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "args": ["tsx", "src/scripts/upload.ts"],
+      "console": "integratedTerminal",
+      "env": { "IS_LOCAL": "true" }
+    },
+    {
+      "name": "Retrieve Script",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "args": ["tsx", "src/scripts/retrieve.ts"],
+      "console": "integratedTerminal",
+      "env": { "IS_LOCAL": "true" }
+    },
+    {
+      "name": "Lambda Handler (local invoke)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "args": ["tsx", "test/helpers/invoke-handler.ts"],
+      "console": "integratedTerminal",
+      "env": {
+        "IS_LOCAL": "true",
+        "BUCKET_NAME": "storagestack-storagebucket19db2ff8-a9bd3c0c"
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+<summary><strong>WebStorm / IntelliJ</strong></summary>
+
+Create run configurations via **Run > Edit Configurations > + > Node.js**:
+
+| Name | Node parameters | Application parameters | Environment variables |
+|------|----------------|----------------------|----------------------|
+| Unit Tests | `--require tsx/cjs` | `./node_modules/vitest/vitest.mjs run --no-coverage` | `NODE_ENV=test` |
+| Integration Tests | `--require tsx/cjs` | `./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts` | |
+| Upload Script | | `./src/scripts/upload.ts` | `IS_LOCAL=true` |
+| Retrieve Script | | `./src/scripts/retrieve.ts` | `IS_LOCAL=true` |
+
+For **Upload/Retrieve scripts**, set the Node interpreter to `npx tsx` or add `tsx` as a Node.js run configuration with the script path.
+
+Alternatively, use the built-in **Vitest** plugin (**Run > Edit Configurations > + > Vitest**) which provides inline gutter icons for running/debugging individual tests.
+
+</details>
+
 ## Deploying to AWS
 
 The same CDK stacks that run locally via LocalStack can be deployed to a real AWS account with no code changes. The S3 client factory, Lambda handler, and CDK stacks all detect the environment automatically.

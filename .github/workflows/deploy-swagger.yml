@@ -14,8 +14,28 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+
   deploy-swagger:
-    name: Upload Swagger to S3 & Import to API Gateway
+    name: Upload Swagger to S3 and import to API Gateway
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
@@ -38,11 +58,14 @@ jobs:
 
           API_ID=$(aws cloudformation describe-stacks \
             --stack-name ApiStack \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text | grep -oP '(?<=https://)[^.]+')
+            --query "Stacks[0].Outputs[?OutputKey=='ApiId'].OutputValue" \
+            --output text)
 
           LAMBDA_ARN=$(aws lambda get-function \
-            --function-name ApiStack-CreateItemFunction \
+            --function-name "$(aws cloudformation describe-stacks \
+              --stack-name ApiStack \
+              --query "Stacks[0].Outputs[?OutputKey=='LambdaFunctionName'].OutputValue" \
+              --output text)" \
             --query "Configuration.FunctionArn" \
             --output text)
 
@@ -61,16 +84,16 @@ jobs:
             "s3://${{ steps.stacks.outputs.bucket_name }}/api-specs/openapi.yaml" \
             --content-type "application/x-yaml"
 
-          echo "Swagger spec uploaded to s3://${{ steps.stacks.outputs.bucket_name }}/api-specs/openapi.yaml"
-
       - name: Import Swagger from S3 into API Gateway
         run: |
+          # Note: put-rest-api requires a local file via fileb:// protocol.
+          # The S3 upload above fulfills the "Swagger in S3" requirement;
+          # the import reads from the local resolved copy because the AWS CLI
+          # does not support importing directly from an S3 URI.
           aws apigateway put-rest-api \
             --rest-api-id "${{ steps.stacks.outputs.api_id }}" \
             --mode overwrite \
             --body "fileb:///tmp/openapi-resolved.yaml"
-
-          echo "Swagger spec imported into API Gateway"
 
       - name: Deploy API Gateway
         run: |
@@ -78,4 +101,20 @@ jobs:
             --rest-api-id "${{ steps.stacks.outputs.api_id }}" \
             --stage-name v1
 
-          echo "API Gateway deployed to stage v1"
+      - name: Smoke test
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ApiStack \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${API_URL}items" \
+            -H "Content-Type: application/json" \
+            -d '{"name": "CI smoke test"}')
+
+          if [ "$RESPONSE" != "201" ]; then
+            echo "Smoke test failed — expected 201, got $RESPONSE"
+            exit 1
+          fi
+
+          echo "Smoke test passed (HTTP $RESPONSE)"
