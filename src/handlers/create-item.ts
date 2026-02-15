@@ -1,6 +1,6 @@
 import type {
-  APIGatewayProxyEventV2,
-  APIGatewayProxyResultV2,
+  APIGatewayProxyEvent,
+  APIGatewayProxyResult,
 } from 'aws-lambda';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { Logger } from '@aws-lambda-powertools/logger';
@@ -51,7 +51,7 @@ function validateRequest(body: unknown): CreateItemRequest {
 function response(
   statusCode: number,
   body: unknown,
-): APIGatewayProxyResultV2 {
+): APIGatewayProxyResult {
   return {
     statusCode,
     headers: { 'Content-Type': 'application/json' },
@@ -62,8 +62,8 @@ function response(
 // --- Handler ---
 
 export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+  event: APIGatewayProxyEvent,
+): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext?.requestId ?? randomUUID();
   logger.appendKeys({ requestId });
 

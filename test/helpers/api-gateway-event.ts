@@ -1,34 +1,50 @@
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEvent } from 'aws-lambda';
 
 export function createApiEvent(
-  overrides: Partial<APIGatewayProxyEventV2> = {},
-): APIGatewayProxyEventV2 {
+  overrides: Partial<APIGatewayProxyEvent> = {},
+): APIGatewayProxyEvent {
   return {
-    version: '2.0',
-    routeKey: 'POST /items',
-    rawPath: '/items',
-    rawQueryString: '',
-    headers: { 'content-type': 'application/json' },
+    httpMethod: 'POST',
+    path: '/items',
+    resource: '/items',
+    headers: { 'Content-Type': 'application/json' },
+    multiValueHeaders: {},
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    pathParameters: null,
+    stageVariables: null,
     requestContext: {
       accountId: '000000000000',
       apiId: 'test-api',
-      domainName: 'localhost',
-      domainPrefix: 'test',
-      http: {
-        method: 'POST',
-        path: '/items',
-        protocol: 'HTTP/1.1',
+      authorizer: null,
+      protocol: 'HTTP/1.1',
+      httpMethod: 'POST',
+      identity: {
+        accessKey: null,
+        accountId: null,
+        apiKey: null,
+        apiKeyId: null,
+        caller: null,
+        clientCert: null,
+        cognitoAuthenticationProvider: null,
+        cognitoAuthenticationType: null,
+        cognitoIdentityId: null,
+        cognitoIdentityPoolId: null,
+        principalOrgId: null,
         sourceIp: '127.0.0.1',
+        user: null,
         userAgent: 'vitest',
+        userArn: null,
       },
+      path: '/items',
+      stage: 'v1',
       requestId: 'test-request-id',
-      routeKey: 'POST /items',
-      stage: '$default',
-      time: new Date().toISOString(),
-      timeEpoch: Date.now(),
+      requestTimeEpoch: Date.now(),
+      resourceId: 'test',
+      resourcePath: '/items',
     },
     body: null,
     isBase64Encoded: false,
     ...overrides,
-  } as APIGatewayProxyEventV2;
+  } as APIGatewayProxyEvent;
 }
