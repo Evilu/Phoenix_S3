@@ -1,0 +1,14 @@
+node_modules/
+dist/
+cdk.out/
+localstack-data/
+*.js
+*.d.ts
+*.d.ts.map
+!vitest.config.ts
+!vitest.integration.config.ts
+coverage/
+.env
+*.log
+/CLAUDE.md
+/.idea/
