@@ -1,17 +1,19 @@
 import { S3Client } from '@aws-sdk/client-s3';
-import { loadConfig } from './config.js';
 
 let cachedClient: S3Client | undefined;
+
+function isLocal(): boolean {
+  return Boolean(process.env.LOCALSTACK_HOSTNAME || process.env.IS_LOCAL);
+}
 
 export function createS3Client(): S3Client {
   if (cachedClient) return cachedClient;
 
-  const config = loadConfig();
-
-  if (config.isLocal) {
+  if (isLocal()) {
+    const host = process.env.LOCALSTACK_HOSTNAME ?? 'localhost';
     cachedClient = new S3Client({
-      endpoint: config.localstackEndpoint,
-      region: config.region,
+      endpoint: `http://${host}:4566`,
+      region: process.env.AWS_REGION ?? 'us-east-1',
       forcePathStyle: true,
       credentials: {
         accessKeyId: 'test',
@@ -19,7 +21,9 @@ export function createS3Client(): S3Client {
       },
     });
   } else {
-    cachedClient = new S3Client({ region: config.region });
+    cachedClient = new S3Client({
+      region: process.env.AWS_REGION ?? 'us-east-1',
+    });
   }
 
   return cachedClient;

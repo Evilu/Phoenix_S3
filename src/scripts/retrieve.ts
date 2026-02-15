@@ -45,7 +45,7 @@ async function retrieveJsonFile(
 
 // --- CLI entrypoint ---
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const key = process.argv[2] ?? 'data/sample.json';
 
   try {

@@ -15,13 +15,14 @@
     "local:destroy": "cdklocal destroy --all --force",
     "local:reset": "docker compose down -v && docker compose up -d && npm run local:deploy",
     "local:logs": "docker compose logs -f localstack",
-    "upload": "npx tsx src/scripts/upload.ts",
-    "retrieve": "npx tsx src/scripts/retrieve.ts",
+    "upload": "IS_LOCAL=true npx tsx src/scripts/upload.ts",
+    "retrieve": "IS_LOCAL=true npx tsx src/scripts/retrieve.ts",
     "cdk:synth": "cdk synth",
     "cdk:deploy": "cdk deploy --all"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.0.0",
+    "@aws-sdk/client-cloudformation": "^3.990.0",
     "@aws-sdk/client-s3": "^3.500.0",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.4.2",

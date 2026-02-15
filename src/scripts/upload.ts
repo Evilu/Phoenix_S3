@@ -69,7 +69,7 @@ async function uploadJsonFile(
 
 // --- CLI entrypoint ---
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const filePath = process.argv[2] ?? resolve('sample-data.json');
   const key = process.argv[3] ?? 'data/sample.json';
 
@@ -114,3 +114,4 @@ async function main(): Promise<void> {
 }
 
 main();
+
