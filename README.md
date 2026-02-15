@@ -97,7 +97,7 @@ Both scripts handle these scenarios with structured error output:
 
 ## Exercise 2: API Gateway POST Endpoint
 
-The OpenAPI spec (`api/openapi.yaml`) is the single source of truth. It's uploaded to S3 and imported into API Gateway via `SpecRestApi`. The Lambda handler persists each created item to S3 under the `items/` prefix.
+The OpenAPI spec (`api/openapi.yaml`) is the single source of truth. At deploy time, CDK reads the spec, substitutes the Lambda ARN, and uploads it to S3 via `BucketDeployment`. The processed spec is also imported inline into API Gateway via `SpecRestApi` (inline import is required because CloudFormation must resolve the Lambda ARN token at deploy time). The Lambda handler persists each created item to S3 under the `items/` prefix.
 
 ### Finding your API URL
 
@@ -185,7 +185,8 @@ test/
 │       └── s3-client.test.ts             # S3 client factory tests
 └── integration/
     ├── setup.ts                          # LocalStack client + bucket setup
-    └── s3-upload-retrieve.test.ts        # End-to-end S3 operations
+    ├── s3-upload-retrieve.test.ts        # End-to-end S3 operations
+    └── api-pipeline.test.ts             # API Gateway → Lambda → S3 pipeline tests
 ```
 
 ## Design Decisions

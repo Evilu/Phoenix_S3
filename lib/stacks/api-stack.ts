@@ -39,13 +39,6 @@ export class ApiStack extends cdk.Stack {
     // Grant the Lambda read/write access to the storage bucket
     props.storageBucket.grantReadWrite(createItemFn.fn);
 
-    // Upload OpenAPI spec to S3 (Exercise 2 requirement)
-    new s3deploy.BucketDeployment(this, 'DeployOpenApiSpec', {
-      sources: [s3deploy.Source.asset(resolve(__dirname, '../../api'))],
-      destinationBucket: props.storageBucket,
-      destinationKeyPrefix: 'api-specs',
-    });
-
     // Load and process the OpenAPI spec, substituting the Lambda ARN
     const specPath = resolve(__dirname, '../../api/openapi.yaml');
     const specString = readFileSync(specPath, 'utf-8');
@@ -56,9 +49,18 @@ export class ApiStack extends cdk.Stack {
       /\$\{CreateItemFunctionArn\}/g,
       createItemFn.fn.functionArn,
     );
+    const processedSpec = JSON.parse(specJson) as Record<string, unknown>;
 
+    // Upload the Swagger spec to S3 (Exercise 2 requirement)
+    new s3deploy.BucketDeployment(this, 'DeployOpenApiSpec', {
+      sources: [s3deploy.Source.asset(resolve(__dirname, '../../api'))],
+      destinationBucket: props.storageBucket,
+      destinationKeyPrefix: 'api-specs',
+    });
+
+    // Import the Swagger spec into API Gateway (inline — CF resolves Lambda ARN tokens)
     this.api = new apigw.SpecRestApi(this, 'ItemsApi', {
-      apiDefinition: apigw.ApiDefinition.fromInline(JSON.parse(specJson)),
+      apiDefinition: apigw.ApiDefinition.fromInline(processedSpec),
       restApiName: 'items-api',
       deployOptions: {
         stageName: props.isLocal ? 'local' : 'v1',
