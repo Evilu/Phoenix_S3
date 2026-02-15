@@ -1,0 +1,85 @@
+openapi: '3.0.1'
+info:
+  title: Items API
+  description: Backend Developer Test — Exercise 2 API
+  version: '1.0.0'
+
+paths:
+  /items:
+    post:
+      summary: Create a new item
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateItemFunctionArn}/invocations
+        passthroughBehavior: when_no_match
+
+components:
+  schemas:
+    CreateItemRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The name of the item
+        description:
+          type: string
+          description: Optional description of the item
+
+    ItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code (e.g. VALIDATION_ERROR, INVALID_JSON)
+        message:
+          type: string
+          description: Human-readable error message
+        requestId:
+          type: string
+          description: Correlation ID for debugging
