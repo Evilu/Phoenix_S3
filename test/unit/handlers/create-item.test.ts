@@ -103,6 +103,17 @@ describe('POST /items handler', () => {
     expect(JSON.parse((result as { body: string }).body).error).toBe('VALIDATION_ERROR');
   });
 
+  it('should return 400 for description exceeding max length', async () => {
+    const event = createApiEvent({
+      body: JSON.stringify({ name: 'Valid', description: 'x'.repeat(1001) }),
+    });
+
+    const result = await handler(event, {} as never, {} as never);
+
+    expect((result as { statusCode: number }).statusCode).toBe(400);
+    expect(JSON.parse((result as { body: string }).body).error).toBe('VALIDATION_ERROR');
+  });
+
   it('should include requestId in error responses', async () => {
     const event = createApiEvent({ body: 'bad' });
 
