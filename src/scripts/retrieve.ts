@@ -25,8 +25,18 @@ async function retrieveJsonFile(
       new GetObjectCommand({ Bucket: bucketName, Key: key }),
     );
 
-    const body = await response.Body!.transformToString();
-    const data: unknown = JSON.parse(body);
+    if (!response.Body) {
+      throw classifyS3Error({ name: 'EmptyBody', message: 'S3 returned empty body' });
+    }
+
+    const body = await response.Body.transformToString();
+
+    let data: unknown;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Error('S3 object is not valid JSON');
+    }
 
     return {
       status: 'success',
@@ -64,4 +74,9 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(
+    JSON.stringify({ status: 'error', message: err instanceof Error ? err.message : String(err) }),
+  );
+  process.exit(1);
+});

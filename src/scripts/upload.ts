@@ -33,7 +33,12 @@ async function uploadJsonFile(
   await verifyBucketAccess(bucketName);
 
   // 2. Read and validate JSON
-  const content = await readFile(filePath, 'utf-8');
+  let content: string;
+  try {
+    content = await readFile(filePath, 'utf-8');
+  } catch (err) {
+    throw new Error(`Cannot read file: ${filePath} (${(err as NodeJS.ErrnoException).code})`);
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -113,5 +118,10 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(
+    JSON.stringify({ status: 'error', message: err instanceof Error ? err.message : String(err) }),
+  );
+  process.exit(1);
+});
 
