@@ -1,7 +1,6 @@
 import {
   S3Client,
   CreateBucketCommand,
-  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import {
   CloudFormationClient,
